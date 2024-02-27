@@ -34,7 +34,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
     send_notification();
 });
 
-chrome.webNavigation.onBeforeNavigate.addListener((result) => {
+chrome.webNavigation.onCommitted.addListener((result) => {
     chrome.notifications.create('test2', {
         type: 'basic',
         iconUrl: 'images/temp_icon.png',
