@@ -4,10 +4,15 @@
     "description": "Productivity Browser Extension",
     "version": "1.0",
     "background": {
-        "service_worker": "service-worker.js"
+        "scripts": ["service-worker.js"]
     },
     "permissions": ["alarms", "notifications", "webNavigation", "storage", "tabs"],
     "action": {
         "default_popup": "popup/popup.html"
+    },
+    "browser_specific_settings": {
+        "gecko": {
+            "id": "jamesscottferg@gmail.com"
+        }
     }
 }
