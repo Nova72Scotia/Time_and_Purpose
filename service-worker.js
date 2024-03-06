@@ -20,18 +20,46 @@ async function create_alarm() {
 
 create_alarm();
 
+chrome.runtime.onInstalled.addListener(async () => {
+    await chrome.storage.local.set({
+        "scaling_timer": {
+            "timer": 0,
+            "current_stage": "use",
+            "cycle_num": 0,
+            "time_stamp": Date.now(),
+            "use_periods": [5, 4, 3, 2, 1],
+            "suspend_periods": [1, 2, 3, 4, 5]
+        }
+    });
+    //let scaling_timer = (await chrome.storage.local.get("scaling_timer")).scaling_timer;
+});
+
+// add alarm creation to onStartup
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
-    let current_counter = null;
-    current_counter = await chrome.storage.local.get("counter")
-    if (JSON.stringify(current_counter) === "{}") {
-        current_counter = 0;
-    } else {
-        current_counter = current_counter.counter;
-        current_counter = current_counter + 1;
+    let scaling_timer = (await chrome.storage.local.get("scaling_timer")).scaling_timer;
+    console.log(scaling_timer.timer, scaling_timer.current_stage, scaling_timer.cycle_num, scaling_timer.time_stamp);
+    if (56000 < (Date.now() - scaling_timer.time_stamp)) {
+        scaling_timer.timer += 1;
+        scaling_timer.time_stamp = Date.now();
+        let needed_periods = "use_periods";
+        if (scaling_timer.current_stage == "suspend") {
+            needed_periods = "suspend_periods";
+        }
+        if (scaling_timer.timer >= scaling_timer[needed_periods][scaling_timer.cycle_num]) {
+            if (scaling_timer.current_stage == "suspend") {
+                scaling_timer.current_stage = "use";
+                scaling_timer.cycle_num += 1;
+            } else {
+                scaling_timer.current_stage = "suspend";
+            }
+            scaling_timer.timer = 0;
+            
+            //send notification of time out?
+        }
     }
-    chrome.storage.local.set({"counter": current_counter});
-    send_notification(current_counter);
+    await chrome.storage.local.set({"scaling_timer": scaling_timer});
+    send_notification(scaling_timer.timer);
 });
 
 chrome.webNavigation.onCompleted.addListener(async (result) => {
