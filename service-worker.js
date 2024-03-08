@@ -1,9 +1,9 @@
-async function send_notification(current_counter) {
+async function send_notification(current_timer, time_limit) {
         chrome.notifications.create('test', {
         type: 'basic',
         iconUrl: 'images/temp_icon.png',
         title: 'Chump',
-        message: `You have ${20 - current_counter} minutes left`,
+        message: `You have ${time_limit - current_timer} minutes left`,
         priority: 1
     });
 }
@@ -29,7 +29,8 @@ chrome.runtime.onInstalled.addListener(async () => {
             "time_stamp": Date.now(),
             "use_periods": [5, 4, 3, 2, 1],
             "suspend_periods": [1, 2, 3, 4, 5]
-        }
+        },
+        "active_limited_tabs": []
     });
     //let scaling_timer = (await chrome.storage.local.get("scaling_timer")).scaling_timer;
 });
@@ -38,7 +39,11 @@ chrome.runtime.onInstalled.addListener(async () => {
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
     let scaling_timer = (await chrome.storage.local.get("scaling_timer")).scaling_timer;
-    console.log(scaling_timer.timer, scaling_timer.current_stage, scaling_timer.cycle_num, scaling_timer.time_stamp);
+    //console.log(scaling_timer.timer, scaling_timer.current_stage, scaling_timer.cycle_num, scaling_timer.time_stamp);
+    let needed_periods = "use_periods";
+    if (scaling_timer.current_stage == "suspend") {
+        needed_periods = "suspend_periods";
+    }
     if (56000 < (Date.now() - scaling_timer.time_stamp)) {
         scaling_timer.timer += 1;
         scaling_timer.time_stamp = Date.now();
@@ -59,17 +64,19 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
         }
     }
     await chrome.storage.local.set({"scaling_timer": scaling_timer});
-    send_notification(scaling_timer.timer);
+    send_notification(scaling_timer.timer, scaling_timer[needed_periods][scaling_timer.cycle_num]);
 });
 
 chrome.webNavigation.onCompleted.addListener(async (result) => {
-    let categories = {"test": ["wikipedia", "facebook"]};
+    // Use sets in categories to speed up search?
+    let categories = {"test": ["wikipedia", "facebook", "fbsbx"]};
     let censored = false;
     for (const ele of result.url.split(".")) {
         if (categories.test.includes(ele)) {
             censored = true;
         }
     }
+    let active_limited_tabs = (await chrome.storage.local.get("active_limited_tabs")).active_limited_tabs;
     if (censored) {
         chrome.notifications.create('test2', {
             type: 'basic',
@@ -78,6 +85,22 @@ chrome.webNavigation.onCompleted.addListener(async (result) => {
             message: `You navigated to ${result.url}`,
             priority: 1
         });
-        chrome.tabs.update({url: "site/home.html"});
+        if (!active_limited_tabs.includes(result.tabId)) {
+            active_limited_tabs.push(result.tabId);
+        }
+        /*chrome.tabs.update({url: "site/home.html"});*/
+    } else {
+        if (active_limited_tabs.includes(result.tabId)) {
+            active_limited_tabs.splice(active_limited_tabs.indexOf(result.tabId), 1);
+        }
     }
+    await chrome.storage.local.set({"active_limited_tabs": active_limited_tabs});
+});
+
+chrome.tabs.onRemoved.addListener(async (result) => {
+    let active_limited_tabs = (await chrome.storage.local.get("active_limited_tabs")).active_limited_tabs;
+    if (active_limited_tabs.includes(result)) {
+        active_limited_tabs.splice(active_limited_tabs.indexOf(result.tabId), 1);
+    }
+    await chrome.storage.local.set({"active_limited_tabs": active_limited_tabs});
 });
