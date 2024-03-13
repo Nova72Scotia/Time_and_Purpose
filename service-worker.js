@@ -97,12 +97,11 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
             }
         } else {
             console.log("in suspend");
-            if (scaling_timer.timer >= scaling_timer.suspend_periods[scaling_timer.current_cycle]) {
+            scaling_timer.timer += 1;
+            if (scaling_timer.timer >= scaling_timer.suspend_periods[scaling_timer.cycle_num]) {
                 scaling_timer.current_stage = "use";
                 scaling_timer.cycle_num += 1;
                 scaling_timer.timer = 0;
-            } else {
-                scaling_timer.timer += 1;
             }
         }
         console.log("cycle_num: ", scaling_timer.cycle_num, "current_stage: ", scaling_timer.current_stage, "timer: ", scaling_timer.timer, "buffer_timer: ", scaling_timer.buffer_timer);
