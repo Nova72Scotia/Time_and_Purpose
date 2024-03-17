@@ -31,44 +31,58 @@ chrome.runtime.onInstalled.addListener(async () => {
             "use_periods": [8, 5, 3, 1, 1],
             "suspend_periods": [1, 2, 3, 4, 5]
         },
-        "active_limited_tabs": []
+        "category_lists": {
+            "social_media": ["facebook", "myspace", "twitter", "flickr", "linkedin", "photobucket", "digg", "ning", "tagged", "squidoo", "instagram", "whatsapp", "tiktok", "reddit", "pinterest", "vk", "discord", "ok", "zhihu", "line", "telegram", "peachavocado", "snapchat", "namu", "tumblr", "ameblo", "nextdoor", "wibo", "xiaohongshu", "heylink", "slack", "kwai", "zalo", "threads", "hatenablog", "atid", "slideshare", "livejournal", "discordapp", "ssstik", "otakudesu", "bukusai", "fb", "ptt", "snaptik", "zaloapp", "dcard", "youtubekids", "ameba", "groupme", "wechat", "messenger", "imo", "fbsbx"],
+            "streaming": ["youtube", "twitch", "netflix", "max", "disneyplus", "primevideo", "miguvideo", "nicovideo", "fmoviesz", "kinopoisk", "hulu", "dailymotion", "xfinity", "aniwatch", "tenki", "crunchyroll", "hbomax", "hotstar", "tapmad", "nhk", "rutube", "mediaset", "programme-tv", "sky", "bfmtv", "zorox", "nrk", "peacocktv", "rezka", "jiocinema", "paramountplus", "vimeo", "yandex", "itponytaa", "iqiyi", "starplus", "afreecatv", "zdf", "hdrezka", "tver", "nos", "abema", "raiplay", "orf", "tvn24", "dramacool", "starz"] 
+        }
     });
-    //let scaling_timer = (await chrome.storage.local.get("scaling_timer")).scaling_timer;
+    let timers = {};
+    let category_lists = (await chrome.storage.local.get("category_lists")).category_lists;
+        for (const ele in category_lists) {
+            timers[ele] = {
+                "timer": 0,
+                "buffer_timer": 0,
+                "current_stage": "use",
+                "cycle_num": 0,
+                "time_stamp": Date.now(),
+                "use_periods": [8, 5, 3, 1, 1],
+                "suspend_periods": [1, 2, 3, 4, 5],
+                "tab_active": false
+            }
+        }
+    console.log(timers);
+    await chrome.storage.local.set({"timers": timers});
 });
 
 // add alarm creation to onStartup
 
 chrome.alarms.onAlarm.addListener(async (alarm) => {
     let scaling_timer = (await chrome.storage.local.get("scaling_timer")).scaling_timer;
-    //let active_limited_tabs = (await chrome.storage.local.get("active_limited_tabs")).active_limited_tabs;
+    //combine two get statements into one
+    let category_lists = (await chrome.storage.local.get("category_lists")).category_lists;
+    let timers = (await chrome.storage.local.get("timers")).timers;
     //console.log(scaling_timer.timer, scaling_timer.current_stage, scaling_timer.cycle_num, scaling_timer.time_stamp);
     let categories = {"test": ["wikipedia", "facebook", "fbsbx"]};
     let active_tabs = await chrome.tabs.query({active: true});
-    let limited = false;
+    //let limited = false;
     for (const i in active_tabs) {
         for (const j of active_tabs[i].url.split(".")) {
-            if (categories.test.includes(j)) {
+            /*if (categories.test.includes(j)) {
                 limited = true;
+            }*/
+            for (const ele in category_lists) {
+                if (category_lists[ele].includes(j) {
+                    timers[ele].tab_active = true
+                }
             }
         }
     }
+    // figure this out next
     let needed_periods = "use_periods";
     if (scaling_timer.current_stage == "suspend") {
         needed_periods = "suspend_periods";
     }
-    /*let tabs_used = false;
-    for (const ele in active_limited_tabs) {
-        console.log((await chrome.tabs.get(active_limited_tabs[ele])).lastAccessed, scaling_timer.time_stamp) 
-        if ((await chrome.tabs.get(active_limited_tabs[ele])).lastAccessed > scaling_timer.time_stamp) {
-        //console.log(ele, active_limited_tabs, active_limited_tabs[ele]);
-            tabs_used = true;
-            console.log('here');
-            break;
-        }
-    }
-    console.log(tabs_used);
-    */
-    if (56000 < (Date.now() - scaling_timer.time_stamp)) {
+   if (56000 < (Date.now() - scaling_timer.time_stamp)) {
         scaling_timer.time_stamp = Date.now();
         let needed_periods = "use_periods";
         if (scaling_timer.current_stage == "suspend") {
@@ -100,6 +114,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
             scaling_timer.timer += 1;
             if (scaling_timer.timer >= scaling_timer.suspend_periods[scaling_timer.cycle_num]) {
                 scaling_timer.current_stage = "use";
+                //need to limit to max length of cycles
                 scaling_timer.cycle_num += 1;
                 scaling_timer.timer = 0;
             }
@@ -119,7 +134,6 @@ chrome.webNavigation.onCompleted.addListener(async (result) => {
             censored = true;
         }
     }
-    //let active_limited_tabs = (await chrome.storage.local.get("active_limited_tabs")).active_limited_tabs;
     if (censored) {
         chrome.notifications.create('test2', {
             type: 'basic',
@@ -128,21 +142,6 @@ chrome.webNavigation.onCompleted.addListener(async (result) => {
             message: `You navigated to ${result.url}`,
             priority: 1
         });
-       /* if (!active_limited_tabs.includes(result.tabId)) {
-            active_limited_tabs.push(result.tabId);
-        }*/
         //chrome.tabs.update({url: "site/home.html"});
-    } else {
-        //if (active_limited_tabs.includes(result.tabId)) {
-        //    active_limited_tabs.splice(active_limited_tabs.indexOf(result.tabId), 1);
-        //}
     }
-    //await chrome.storage.local.set({"active_limited_tabs": active_limited_tabs});
 });
-
-/*chrome.tabs.onRemoved.addListener(async (result) => {    let active_limited_tabs = (await chrome.storage.local.get("active_limited_tabs")).active_limited_tabs;
-    if (active_limited_tabs.includes(result)) {
-        active_limited_tabs.splice(active_limited_tabs.indexOf(result.tabId), 1);
-    }
-    await chrome.storage.local.set({"active_limited_tabs": active_limited_tabs});
-});*/
