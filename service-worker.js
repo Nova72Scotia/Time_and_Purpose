@@ -137,10 +137,11 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 chrome.webNavigation.onCompleted.addListener(async (result) => {
     let category_lists = (await chrome.storage.local.get("category_lists")).category_lists;
     let category = "";
+    console.log(result.url);
     for (const ele of result.url.split(".")) {
-        if (category_lists.social_media.includes(ele)) {
+        if (category_lists.social_media.includes(ele) && !result.url.includes("/embed/")) {
             category = "social_media";
-        } else if (category_lists.streaming.includes(ele)) {
+        } else if (category_lists.streaming.includes(ele) && !result.url.includes("/embed/")) {
             category = "streaming";
         }
     }

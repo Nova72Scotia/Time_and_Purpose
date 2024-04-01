@@ -6,6 +6,10 @@
     "background": {
         "service_worker": "service-worker.js"
     },
+    "options_ui": {
+        "page": "options/options.html",
+        "open_in_tab": true
+    },
     "permissions": ["alarms", "notifications", "webNavigation", "storage", "tabs"],
     "action": {
         "default_popup": "popup/popup.html"
