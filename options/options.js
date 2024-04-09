@@ -33,8 +33,4 @@ document.addEventListener("DOMContentLoaded", async () => {
             current_option.selected = true;
         }
     }
-/*    document.querySelector("#social_media").value = social_media_timer.restriction_type;
-    document.querySelector("#social_media").textContent = text_value_key[social_media_timer.restriction_type];
-    document.querySelector("#streaming").value = streaming_timer.restriction_type;
-    document.querySelector("#streaming").textContent = text_value_key[streaming_timer.restriction_type];
-*/});
+});

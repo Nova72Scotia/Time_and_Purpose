@@ -1,0 +1,25 @@
+body {
+    background-color: #313131;
+    color: #D3D3D3;
+    text-align: center;
+}
+
+h1 {
+    padding: 10% 0 10%;
+}
+
+div {
+    padding: 1.25em 0;
+}
+
+label, select, input {
+    font-size: 1.5em;
+}
+
+label {
+    padding-right: 8px;
+}
+
+#submit {
+    border-radius: 10%;
+}
