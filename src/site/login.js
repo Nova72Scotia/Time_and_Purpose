@@ -10,7 +10,7 @@ document.querySelector("#submit").addEventListener("click", async () => {
 });
 
 chrome.runtime.onMessage.addListener((message) => {
-    if (message.response.sender == "service-worker.js" && message.response.target == "login.js") {
-        document.querySelector("#status").textContent = message.response.message;
+    if (message.sender == "service-worker.js" && message.target == "login.js") {
+        document.querySelector("#status").textContent = message.message;
     }
 });

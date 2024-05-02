@@ -1,9 +1,9 @@
 // add differnent notifications for various events
 async function send_notification(current_timer, time_limit, use_or_suspend, category) {
-        chrome.notifications.create(`${category}test`, {
+    chrome.notifications.create(`${category}test`, {
         type: 'basic',
         iconUrl: 'images/temp_icon.png',
-        title: 'Chump',
+        title: `${category} Timer`,
         message: `You have ${time_limit - current_timer} minutes left of ${use_or_suspend} time on ${category} sites.`,
         priority: 1
     });
@@ -11,7 +11,7 @@ async function send_notification(current_timer, time_limit, use_or_suspend, cate
 
 import { initializeApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'firebase/auth/web-extension';
-import { getFirestore } from 'firebase/firestore'
+import { getFirestore, doc, collection, setDoc, getDoc } from 'firebase/firestore'
 
 const firebase_config = {
     apiKey: "AIzaSyASxztBbPt8oc1mJCZujLtQvy7Dmm4-qlo",
@@ -24,9 +24,7 @@ const firebase_config = {
 };
 const app = initializeApp(firebase_config);
 const auth = getAuth(app);
-let logged_in_bool = false;
 const firestore = getFirestore(app);
-
 
 async function create_alarm() {
     const timer_alarm = await chrome.alarms.get("timer_update");
@@ -39,7 +37,20 @@ async function create_alarm() {
 }
 
 async function update_timer(timer_name) {
-    let timer = (await chrome.storage.local.get(timer_name))[timer_name];
+    let timer;
+    let firebase_vars = (await chrome.storage.local.get("firebase_vars")).firebase_vars;
+    if (firebase_vars.logged_in_bool) {
+        const doc_snap = await getDoc(doc(firestore, "users", firebase_vars.user_id));
+        if (doc_snap.exists()) {
+            timer = doc_snap.data()[timer_name];
+            console.log("timer retrieval worked", timer_name);
+            await chrome.storage.local.set({timer_name: timer});
+        } else {
+            console.log("Doc getting failed");
+        }
+    } else {
+        timer = (await chrome.storage.local.get(timer_name))[timer_name];
+    }
     if (timer.restriction_type == "timed") {
         let category_list = [];
         if (timer_name == "social_media_timer") {
@@ -66,20 +77,12 @@ async function update_timer(timer_name) {
         if (56000 < (Date.now() - timer.time_stamp)) {
             timer.time_stamp = Date.now();
             let needed_periods = "use_periods";
-            if (timer.current_stage == "suspend") {
-                needed_periods = "suspend_periods";
-            }
             if (timer.tab_active) {
                 timer.timer += 1;
                 timer.buffer_timer = 0;
                 if (timer.timer >= timer[needed_periods][timer.cycle_num]) {
                     timer.current_stage = "suspend";
                     timer.timer = 0;
-                    for (const ele in active_limited_tabs) {
-                        chrome.tabs.update(active_limited_tabs[ele], {url: "site/home.html"});
-                    }
-                //send notification of time out?
-                //update tabs to not be limited urls
                 }
             } else if (timer.current_stage == "use") {
                 if (timer.timer > 0) {
@@ -102,11 +105,35 @@ async function update_timer(timer_name) {
             }
             console.log("cycle_num: ", timer.cycle_num, "current_stage: ", timer.current_stage, "timer: ", timer.timer, "buffer_timer: ", timer.buffer_timer);
             if (timer_name == "social_media_timer") {
+                console.log("here1", firebase_vars.logged_in_bool, firebase_vars.user_id);
                 await chrome.storage.local.set({"social_media_timer": timer});
+                if (firebase_vars.logged_in_bool) {
+                    console.log("here2");
+                    try {
+                        await setDoc(doc(firestore, "users", firebase_vars.user_id), {social_media_timer: timer}, {merge: true});
+                        console.log("Doc updated from timer update");
+                    } catch (error) {
+                        console.log("Error updating from timer update", error);
+                    }
+                }
             } else if (timer_name == "streaming_timer") {
                 await chrome.storage.local.set({"streaming_timer": timer});
+                if (firebase_vars.logged_in_bool) {
+                    try {
+                        await setDoc(doc(firestore, "users",firebase_vars.user_id), {streaming_timer: timer}, {merge: true});
+                        console.log("Doc updated from timer update");
+                    } catch (error) {
+                        console.log("Error updating from timer update", error);
+                    }
+                }
             }
-            send_notification(timer.timer, timer[needed_periods][timer.cycle_num], timer.current_stage, timer.name);
+        }
+        send_notification(timer.timer, timer[needed_periods][timer.cycle_num], timer.current_stage, timer.name);
+        if (timer.current_stage == "suspend") {
+            for (const ele in active_limited_tabs) {
+                chrome.tabs.update(active_limited_tabs[ele], {url: "site/home.html"});
+            }
+            //send notification of time out?
         }
     }
 }
@@ -114,6 +141,8 @@ async function update_timer(timer_name) {
 create_alarm();
 
 chrome.runtime.onInstalled.addListener(async () => {
+    let logged_in_bool = false;
+    let user_id = null;
     await chrome.storage.local.set({
         "category_lists": {
             "social_media": ["facebook", "myspace", "twitter", "flickr", "linkedin", "photobucket", "digg", "ning", "tagged", "squidoo", "instagram", "whatsapp", "tiktok", "reddit", "pinterest", "vk", "discord", "ok", "zhihu", "line", "telegram", "peachavocado", "snapchat", "namu", "tumblr", "ameblo", "nextdoor", "wibo", "xiaohongshu", "heylink", "slack", "kwai", "zalo", "threads", "hatenablog", "atid", "slideshare", "livejournal", "discordapp", "ssstik", "otakudesu", "bukusai", "fb", "ptt", "snaptik", "zaloapp", "dcard", "youtubekids", "ameba", "groupme", "wechat", "messenger", "imo", "fbsbx"],
@@ -142,6 +171,10 @@ chrome.runtime.onInstalled.addListener(async () => {
             "suspend_periods": [8, 15, 20, 25, 30],
             "tab_active": false,
             "restriction_type": "restricted"
+        },
+        "firebase_vars": {
+            "logged_in_bool": logged_in_bool,
+            "user_id": user_id
         }
     });
 });
@@ -175,30 +208,40 @@ chrome.webNavigation.onCompleted.addListener(async (result) => {
     }
 });
 
-chrome.runtime.onMessage.addListener((message) => {
+chrome.runtime.onMessage.addListener(async (message) => {
+    let firebase_vars = (await chrome.storage.local.get("firebase_vars")).firebase_vars;
     if (message.sender == "create_account.js") {
         createUserWithEmailAndPassword(auth, message.credentials.email, message.credentials.password)
-            .then((userCredential) => {
+            .then(async (userCredential) => {
                 const user = userCredential.user;
+                firebase_vars.user_id = user.uid;
                 console.log(user);
                 chrome.runtime.sendMessage({
-                    response: {
-                        message: "Account Created Successfully",
-                        sender: "service-worker.js",
-                        target: "create_account.js"
-                    }
+                    message: "Account Created Successfully",
+                    sender: "service-worker.js",
+                    target: "create_account.js"
                 });
+                try {
+                    let category_lists = (await chrome.storage.local.get("category_lists")).category_lists;
+                    let social_media_timer = (await chrome.storage.local.get("social_media_timer")).social_media_timer;
+                    let streaming_timer = (await chrome.storage.local.get("streaming_timer")).streaming_timer;
+                    await setDoc(doc(firestore, "users", user_id), {
+                        category_lists: category_lists,
+                        social_media_timer: social_media_timer,
+                        streaming_timer: streaming_timer
+                    });
+                } catch (error) {
+                    console.log("Firestore doc creation failed", error);
+                }
             })
             .catch((error) => {
                 const errorCode = error.code;
                 const errorMessage = error.message;
                 console.log("Code", errorCode, "Message", errorMessage);
                 chrome.runtime.sendMessage({
-                    response: {
-                        message: `Account Creation failed. Error Message: ${errorMessage}`,
-                        sender: "service-worker.js",
-                        target: "create_account.js"
-                    }
+                    message: `Account Creation failed. Error Message: ${errorMessage}`,
+                    sender: "service-worker.js",
+                    target: "create_account.js"
                 });
             });
     } else if (message.sender == "login.js") {
@@ -207,11 +250,9 @@ chrome.runtime.onMessage.addListener((message) => {
                 const user = userCredential.user;
                 console.log("logged in", user);
                 chrome.runtime.sendMessage({
-                    response: {
-                        message: "Account Logged In",
-                        sender: "service-worker.js",
-                        target: "login.js"
-                    }
+                    message: "Account Logged In",
+                    sender: "service-worker.js",
+                    target: "login.js"
                 });
             })
             .catch((error) => {
@@ -219,21 +260,17 @@ chrome.runtime.onMessage.addListener((message) => {
                 const errorMessage = error.message;
                 console.log("Code", errorCode, "Message", errorMessage);
                 chrome.runtime.sendMessage({
-                    response: {
-                        message: `Login failed. Error Message: ${errorMessage}`,
-                        sender: "service-worker.js",
-                        target: "login.js"
-                    }
+                    message: `Login failed. Error Message: ${errorMessage}`,
+                    sender: "service-worker.js",
+                    target: "login.js"
                 });
             });
     } else if (message.sender == "home.js") {
         if (message.message == "check_login_status") {
             chrome.runtime.sendMessage({
-                response: {
-                    sender: "service-worker.js",
-                    target: "home.js",
-                    user_bool: logged_in_bool
-                }
+                sender: "service-worker.js",
+                target: "home.js",
+                user_bool: firebase_vars.logged_in_bool
             });
         } else if (message.message == "logout") {
             signOut(auth)
@@ -243,16 +280,45 @@ chrome.runtime.onMessage.addListener((message) => {
                     console.log("Sign out Failed");
                 });
         }
+    } else if (message.sender == "options.js") {
+        try {
+            let category_lists = (await chrome.storage.local.get("category_lists")).category_lists;
+            let social_media_timer = (await chrome.storage.local.get("social_media_timer")).social_media_timer;
+            let streaming_timer = (await chrome.storage.local.get("streaming_timer")).streaming_timer;
+            await setDoc(doc(firestore, "users", firebase_vars.user_id), {
+                category_lists: category_lists,
+                social_media_timer: social_media_timer,
+                streaming_timer: streaming_timer
+            });
+            console.log("Doc updated from options");
+        } catch (error) {
+            console.log("Firestore doc creation failed", error);
+        }
     }
+    await chrome.storage.local.set({"firebase_vars": firebase_vars});
 });
 
-onAuthStateChanged(auth, (user) => {
+
+onAuthStateChanged(auth, async (user) => {
+    let firebase_vars = (await chrome.storage.local.get("firebase_vars")).firebase_vars;
     if (user) {
         console.log("User currently logged in");
-        logged_in_bool = true;
+        firebase_vars.logged_in_bool = true;
+        firebase_vars.user_id = user.uid;
         console.log(user);
+        console.log(firebase_vars.logged_in_bool);
+        const doc_snap = await getDoc(doc(firestore, "users", firebase_vars.user_id));
+        if (doc_snap.exists()) {
+            console.log("Data retrieved", doc_snap.data(), doc_snap.data().social_media_timer);
+            await chrome.storage.local.set({"category_lists": doc_snap.data().category_lists});
+            await chrome.storage.local.set({"social_media_timer": doc_snap.data().social_media_timer});
+            await chrome.storage.local.set({"streaming_timer": doc_snap.data().streaming_timer});
+        } else {
+            console.log("Doc getting failed");
+        }
     } else {
         console.log("No user currently logged in");
-        logged_in_bool = false;
+        firebase_vars.logged_in_bool = false;
     }
+    await chrome.storage.local.set({"firebase_vars": firebase_vars});
 });
