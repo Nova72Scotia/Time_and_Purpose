@@ -1,5 +1,6 @@
+//Add listener for clicking on submit button
 document.querySelector("#submit").addEventListener("click", async () => {
-    console.log("submitted");
+    //Sends service worker email and password of user
     chrome.runtime.sendMessage({
         credentials: {
             email: document.querySelector("#email").value,
@@ -9,6 +10,7 @@ document.querySelector("#submit").addEventListener("click", async () => {
     });
 });
 
+//Listens for response from service worker, updates login page p element based on success or fail
 chrome.runtime.onMessage.addListener((message) => {
     if (message.sender == "service-worker.js" && message.target == "login.js") {
         document.querySelector("#status").textContent = message.message;

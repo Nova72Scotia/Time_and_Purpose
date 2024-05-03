@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "Time & Purpose",
+  "version": "1.0",
+  "description": "Productivity Browser Extension",
+  "background": {
+    "scripts": ["service-worker.js"]
+  },
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": true
+  },
+  "permissions": [
+    "alarms",
+    "notifications",
+    "webNavigation",
+    "storage",
+    "tabs"
+  ],
+  "action": {
+    "default_popup": "popup/popup.html"
+  },
+  "icons": {
+    "1024": "images/Time_Purpose1024.png",
+    "256": "images/Time_Purpose256.png",
+    "128": "images/Time_Purpose128.png",
+    "72": "images/Time_Purpose72.png",
+    "48": "images/Time_Purpose48.png",
+    "32": "images/Time_Purpose32.png",
+    "16": "images/Time_Purpose16.png"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "jamesscottferg@gmail.com"
+    }
+  }
+}

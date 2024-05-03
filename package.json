@@ -5,7 +5,7 @@
   "main": "service-worker.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "rm -fr dist && rollup -c rollup.config.mjs && cp -r src/images dist/images && cp -r src/site dist/site"
+    "build": "rm -fr dist && rollup -c rollup.config.mjs && cp -r src/site dist/site"
   },
   "repository": {
     "type": "git",
