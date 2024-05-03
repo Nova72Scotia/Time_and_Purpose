@@ -7,16 +7,13 @@ body {
     font-size: 1.25rem;
 }
 
-h1 {
-    margin-top: 50px; /* Add top margin */
+h1, h2 {
+    color: #363d46; /* Text color */
 }
 
 a img {
     border-radius: 50%; /* Make the image round */
-}
-
-form {
-    margin-top: 20px; /* Add top margin */
+    margin-top: 50px; /* Add some top margin */
 }
 
 div {
@@ -27,23 +24,31 @@ label {
     font-weight: bold; /* Make labels bold */
 }
 
-select {
+input[type="email"],
+input[type="password"] {
+    width: 250px; /* Set input field width */
     padding: 8px; /* Add padding */
+    margin-top: 5px; /* Add some top margin */
     border-radius: 5px; /* Add border radius */
     border: 1px solid #363d46; /* Set border color */
 }
 
-input[type="submit"] {
+button {
     background-color: #363d46; /* Secondary background color */
     color: #ecedef; /* Text color */
     border: none; /* Remove default button border */
     padding: 10px 20px; /* Add padding */
-    margin-top: 20px; /* Add top margin */
+    margin-top: 20px; /* Add some top margin */
     cursor: pointer; /* Change cursor to pointer on hover */
     font-size: 18px; /* Set font size */
 }
 
-input[type="submit"]:hover {
+button:hover {
     background-color: #2c313a; /* Hover background color */
+}
+
+#status {
+    margin-top: 20px; /* Add margin */
+    font-weight: bold; /* Make status text bold */
 }
 
